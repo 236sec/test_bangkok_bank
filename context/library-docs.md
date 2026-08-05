@@ -25,6 +25,7 @@ The backend validates the access token — not the ID token — against the Auth
 
 The only ORM. All database access goes through Prisma.
 
+- Using Prisma Skill avaiable with `prisma-*`
 - Generated client lives in `/backend/node_modules/.prisma`; schema in `/backend/prisma/schema.prisma`.
 - Every `Collection` and `Bookmark` query includes a `where: { ownerId }` clause. Add a lint/test guard if feasible.
 - Migrations are committed and run via `prisma migrate deploy` in the Docker entrypoint and CI.
@@ -48,4 +49,4 @@ Client-side routing for the three pages and auth redirect.
 
 ---
 
-*This file grows as libraries are added. When installing a new third-party library, add its section here with project-specific usage rules.*
+_This file grows as libraries are added. When installing a new third-party library, add its section here with project-specific usage rules._
