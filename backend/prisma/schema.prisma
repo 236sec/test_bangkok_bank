@@ -1,0 +1,31 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Collection {
+  id        String     @id @default(uuid())
+  name      String
+  ownerId   String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  bookmarks Bookmark[]
+}
+
+model Bookmark {
+  id           String      @id @default(uuid())
+  url          String
+  title        String
+  favicon      String?
+  notes        String?
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id])
+  ownerId      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
