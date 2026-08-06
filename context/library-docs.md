@@ -17,7 +17,7 @@ The sole auth integration on the frontend. Wraps the app in an `Auth0Provider` c
 
 The backend validates the access token — not the ID token — against the Auth0 tenant's JWKS endpoint inside a NestJS guard.
 
-- The guard runs globally; the only exempt route is the health check.
+- `JwtAuthGuard` (extends `AuthGuard('jwt')`) is applied **per-route** with `@UseGuards(JwtAuthGuard)`; the only exempt route is the health check (`GET /health`).
 - Validate `iss` and `aud` against env-configured values (`AUTH0_ISSUER`, `AUTH0_AUDIENCE`).
 - Extract the `sub` claim as `ownerId` — the unique identifier for the user. Never accept `ownerId` from the request.
 - Use a library that supports JWKS caching/rotation (e.g. `passport-jwt` or `jwks-rsa`).

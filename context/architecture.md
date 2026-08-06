@@ -33,7 +33,7 @@
 - Authentication uses Auth0 OIDC with the **Authorization Code flow + PKCE (S256)**. No implicit flow is ever used.
 - The frontend SPA uses `@auth0/auth0-react`, which performs the PKCE code challenge, handles the redirect, exchanges the code for tokens, and silently refreshes.
 - The backend accepts the **access token** (not the ID token) as the `Authorization: Bearer <token>` credential on every request.
-- The backend validates the access token's signature against the Auth0 tenant's **JWKS endpoint** and checks the audience/issuer before any controller handler runs. This happens in a NestJS auth guard applied globally (the only unauthenticated route is the health check).
+- The backend validates the access token's signature against the Auth0 tenant's **JWKS endpoint** and checks the audience/issuer before any protected controller handler runs. This happens in a NestJS auth guard applied per-route via `@UseGuards(JwtAuthGuard)` (the only unauthenticated route is the health check).
 - The `sub` claim of the validated token is the sole source of `ownerId`. A unique identifier is extracted from the token to identify the user; if a unique field can be reliably extracted, it is used as `ownerId`.
 - Sessions are managed entirely by the Auth0 SDK on the frontend. The backend is stateless — no session store.
 
@@ -42,5 +42,5 @@
 1. **Every query scoped to `ownerId`** — No Prisma query for collections or bookmarks ever runs without a `WHERE ownerId = <currentUser>` filter. No unscoped `findMany` exists.
 2. **`ownerId` comes only from the validated token** — Never from a request body, query param, or route param. The `sub` claim from the validated JWT is the only source of truth.
 3. **No cross-owner data paths** — No endpoint takes another user's ID, no admin override, no "view as." The concept of other users does not exist in the API surface.
-4. **Tokens validated on every request** — No unauthenticated routes except the health check. The NestJS auth guard runs before any controller handler.
+4. **Tokens validated on every protected request** — No unauthenticated routes except the health check. The `JwtAuthGuard` runs before protected controller handlers.
 5. **Frontend never exposes other users' data** — No client-side routing can display another user's data. The API simply never returns it, so the frontend cannot leak what it never receives.
