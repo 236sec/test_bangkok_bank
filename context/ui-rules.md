@@ -2,7 +2,7 @@
 
 ## Component Library
 
-MUI v6 (`@mui/material`) on top of the Vite + React SPA. The theme is centralized in `/frontend/src/theme/` and overrides MUI defaults to reference the CSS variable tokens defined in `ui-tokens.md`. Do not import raw MUI default colors — always pull from the themed palette. Icons come from `@mui/icons-material`.
+MUI >= v9 (`@mui/material`) on top of the Vite + React SPA. The theme is centralized in `/frontend/src/theme/` and overrides MUI defaults to reference the CSS variable tokens defined in `ui-tokens.md`. Do not import raw MUI default colors — always pull from the themed palette. Icons come from `@mui/icons-material`.
 
 ## Layout Patterns
 

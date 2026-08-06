@@ -6,6 +6,7 @@ Project-specific usage rules for third-party libraries. Before using any library
 
 The sole auth integration on the frontend. Wraps the app in an `Auth0Provider` configured with the Auth0 tenant's domain, client id, and API audience.
 
+- official docs: https://auth0.com/llms.txt
 - Uses the **Authorization Code flow with PKCE (S256)**. Never enable the implicit flow.
 - `useAuth0()` is the only way to read auth state or tokens. Never parse/store tokens manually.
 - `getAccessTokenSilently()` is used to attach `Authorization: Bearer <token>` to every API call; wrap fetch in an authenticated client that calls it.
@@ -23,15 +24,19 @@ The backend validates the access token — not the ID token — against the Auth
 
 ## Prisma (Backend)
 
+**Version: Prisma 7.x** (`prisma@7`, `@prisma/client@7`) with `@prisma/adapter-pg` + `pg` driver adapter.
+
 The only ORM. All database access goes through Prisma.
 
-- Using Prisma Skill avaiable with `prisma-*`
-- Generated client lives in `/backend/node_modules/.prisma`; schema in `/backend/prisma/schema.prisma`.
+- **Generator**: `prisma-client` (not `prisma-client-js`) with `moduleFormat = "cjs"` (NestJS is CommonJS). Generated client lives in `backend/generated/prisma/` (gitignored).
+- **Config**: `backend/prisma.config.ts` manages the datasource URL via `env('DATABASE_URL')`. Schema in `backend/prisma/schema.prisma` — no `url` field in the datasource block.
+- **Driver adapter**: `@prisma/adapter-pg` with `pg.Pool` for PostgreSQL connections. `PrismaService` injects `ConfigService` to read `DATABASE_URL`, creates the pool, and passes `new PrismaPg(pool)` as adapter to `PrismaClient`.
+- **Lifecycle**: `PrismaService.onModuleInit()` calls `$connect()` with retry logic (5 attempts, 2s delay). `onModuleDestroy()` calls `$disconnect()` then `pool.end()`.
 - Every `Collection` and `Bookmark` query includes a `where: { ownerId }` clause. Add a lint/test guard if feasible.
 - Migrations are committed and run via `prisma migrate deploy` in the Docker entrypoint and CI.
 - The `ownerId` column is non-nullable on both models.
 
-## MUI v6 + @mui/icons-material (Frontend)
+## MUI >= v9 + @mui/icons-material (Frontend)
 
 The UI component library and icon set.
 
@@ -39,7 +44,7 @@ The UI component library and icon set.
 - Icons come only from `@mui/icons-material`. Use `fontSize="small"` for inline/nav, `medium` for buttons/headers.
 - Light mode only in v1 — no dark theme setup.
 
-## React Router
+## React Router >= v8
 
 Client-side routing for the three pages and auth redirect.
 

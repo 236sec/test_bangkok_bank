@@ -5,14 +5,14 @@
 | Layer             | Technology                          | Role                                                          |
 | ----------------- | ----------------------------------- | ------------------------------------------------------------- |
 | Frontend          | Vite + React 19 + TypeScript        | SPA hosting all three pages and the OIDC client               |
-| UI                | MUI v6 + MUI Icons                  | Component library, theming, icons                              |
-| Routing           | React Router                        | Client-side routing for `/collections`, `/bookmarks`, `/all`   |
+| UI                | MUI >= v9 + MUI Icons               | Component library, theming, icons                              |
+| Routing           | React Router >= v8                   | Client-side routing for `/collections`, `/bookmarks`, `/all`   |
 | Auth (frontend)   | `@auth0/auth0-react`                | PKCE S256 code flow, token storage, silent refresh             |
 | Backend           | NestJS 11 + TypeScript              | REST API: `/collections`, `/bookmarks`, `/me`                 |
 | ORM               | Prisma                              | Schema, migrations, typed queries against PostgreSQL           |
 | Database          | PostgreSQL                          | Persistent storage for collections and bookmarks               |
 | Auth (backend)    | Auth0 JWKS JWT validation (guard)   | Validates the access token on every request                   |
-| CI/CD             | GitHub Actions                      | Lint + type-check + tests on push                              |
+| CI/CD             | Jenkins                             | Lint + type-check + tests on push                              |
 | Containerization  | Docker + Docker Compose             | Local dev for frontend, backend, and PostgreSQL                |
 
 ## System Boundaries

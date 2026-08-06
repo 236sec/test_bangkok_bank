@@ -1,3 +1,6 @@
+# generated prisma client
+generated/
+
 # compiled output
 /dist
 /node_modules
