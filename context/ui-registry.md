@@ -8,12 +8,11 @@ This file keeps the component inventory visible — what exists, where it lives,
 
 | Component | Path | Purpose | Patterns Used |
 | --------- | ---- | ------- | ------------- |
-| App (layout shell) | `src/App.tsx` | Authenticated shell: persistent left sidebar (placeholder) + scrollable main content area rendering child routes via `<Outlet />`. | MUI `Box` with flex layout, `borderColor: 'divider'` (token), tokens via themed palette only |
-| Auth0Provider | `src/auth/Auth0Provider.tsx` | Wraps app in `@auth0/auth0-react` `Auth0Provider` (PKCE, refresh tokens, localstorage cache); `onRedirectCallback` navigates to `appState.returnTo || '/profile'`. | MUI-free; React Router `useNavigate`; env via `../env` |
-| AuthGuard | `src/auth/AuthGuard.tsx` | Route guard: shows `CircularProgress` while loading, calls `loginWithRedirect()` when unauthenticated, renders children when authenticated. | MUI `CircularProgress` centered in `Box`; `useAuth0` |
-| LoginButton | `src/auth/LoginButton.tsx` | Calls `loginWithRedirect({ appState: { returnTo: '/profile' } })`; disabled while loading. | MUI `Button` contained/primary |
+| App (layout shell) | `src/App.tsx` | Authenticated shell: persistent left sidebar with LogoutButton pinned to bottom + scrollable main content area rendering child routes via `<Outlet />`. | MUI `Box` with flex column sidebar, `borderColor: 'divider'` (token), LogoutButton at bottom via `mt: 'auto'`, tokens via themed palette only |
+| Auth0Provider | `src/auth/Auth0Provider.tsx` | Wraps app in `@auth0/auth0-react` `Auth0Provider` (PKCE, refresh tokens, localstorage cache); `onRedirectCallback` navigates to `appState.returnTo || '/profile'`; `redirect_uri` set to `${window.location.origin}/callback`. | MUI-free; React Router `useNavigate`; env via `../env` |
+| AuthGuard | `src/auth/AuthGuard.tsx` | Route guard: shows `CircularProgress` while loading, calls `loginWithRedirect()` when unauthenticated, renders children when authenticated. Redirect failures surface via global `useError().showError()`. | MUI `CircularProgress` centered in `Box`; `useAuth0`; `useError` |
 | LogoutButton | `src/auth/LogoutButton.tsx` | Calls `logout({ logoutParams: { returnTo: window.location.origin } })`; disabled while loading. | MUI `Button` outlined/primary |
-| ProfilePage | `src/pages/ProfilePage.tsx` | Temporary post-login page: avatar, name, email, truncated access token. Wrapped in `AuthGuard`. | MUI `Card` (outlined), `Avatar` (primary bg), `Typography`; `useAuthenticatedUser` hook; mono font token `var(--font-mono)` |
+| ProfilePage | `src/pages/ProfilePage.tsx` | Displays user identity from `GET /me` (currently `{ sub }`): avatar with initial, sub value, and full sub in mono. Wrapped in `AuthGuard`. | MUI `Card` (outlined), `Avatar` (primary bg), `Typography`; `fetchMe()` API client; mono font token `var(--font-mono)`; `useAuth0().getAccessTokenSilently()` for Bearer token |
 | ErrorProvider | `src/error/ErrorContext.tsx` | Global error context: `error` state + `showError(message)` + `clearError()` via React context. | Pure context/provider — no visual components |
 | ErrorSnackbar | `src/error/ErrorSnackbar.tsx` | Renders MUI `Snackbar` + `Alert severity="error" variant="filled"` when `useError().error` is set; auto-hides after 8s. | MUI `Snackbar` + `Alert`; `useError` hook; renders `null` when no error |
 
@@ -89,37 +88,38 @@ These patterns are extracted from the project scaffold and must be matched by ev
 ### AuthGuard (loading + gate)
 
 File: `frontend/src/auth/AuthGuard.tsx`
-Last updated: 2026-08-06
+Last updated: 2026-08-10
 
 | Property | Pattern |
 |----------|---------|
 | Loading container | `display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh'` |
 | Loading indicator | MUI `CircularProgress` (default color = primary) |
-| Unauthenticated state | Returns `null` after triggering `loginWithRedirect()` |
+| Unauthenticated state | Calls `loginWithRedirect()` then returns `null`; failures surface via `useError().showError()` |
 | Authenticated state | Renders `children` unchanged |
+| Error handling | Uses global `useError` hook — redirect failures appear in `ErrorSnackbar` |
 
 **Pattern notes:**
-This is the single loading/guard pattern for the app. Every protected page uses `AuthGuard` as a wrapper — no page should reimplement its own gate logic. The centered 50vh spinner is the canonical loading state for auth.
+This is the single loading/guard pattern for the app. Every protected page uses `AuthGuard` as a wrapper — no page should reimplement its own gate logic. The centered 50vh spinner is the canonical loading state for auth. Redirect failures are surfaced through the global error system, not `console.error`.
 
-### LoginButton / LogoutButton
+### LogoutButton
 
-File: `frontend/src/auth/LoginButton.tsx`, `frontend/src/auth/LogoutButton.tsx`
+File: `frontend/src/auth/LogoutButton.tsx`
 Last updated: 2026-08-06
 
-| Property | LoginButton | LogoutButton |
-|----------|------------|--------------|
-| Variant | `contained` | `outlined` |
-| Color | `primary` | `primary` |
-| Disabled state | When `isLoading` | When `isLoading` |
-| Label | "Log in" | "Log out" |
+| Property | Pattern |
+|----------|---------|
+| Variant | `outlined` |
+| Color | `primary` |
+| Disabled state | When `isLoading` |
+| Label | "Log out" |
 
 **Pattern notes:**
-Primary actions use `contained` + `primary`. Secondary/exit actions use `outlined` + `primary`. No custom sizing — both buttons use MUI's default `medium` size. This sets the baseline for the button hierarchy: contained = forward action, outlined = exit/secondary action.
+Secondary/exit actions use `outlined` + `primary`. No custom sizing — uses MUI's default `medium` size. Placed at the bottom of the sidebar via `mt: 'auto'` in a flex column container. Login is handled automatically by `AuthGuard` — no separate login button exists.
 
 ### ProfilePage (user detail card)
 
 File: `frontend/src/pages/ProfilePage.tsx`
-Last updated: 2026-08-06
+Last updated: 2026-08-10
 
 | Property | Pattern |
 |----------|---------|
@@ -129,13 +129,13 @@ Last updated: 2026-08-06
 | Card padding | `CardContent` with `display: 'flex', flexDirection: 'column', gap: 2` |
 | Avatar size | 64×64px (`width: 64, height: 64`) |
 | Avatar bg | `bgcolor: 'primary.main'`, text `color: 'primary.contrastText'` |
-| User name | `Typography variant="h6"` |
-| User email | `Typography variant="body2" color="text.secondary"` |
+| Identity display | `sub` claim from `/me` response |
+| Data source | `fetchMe(accessToken)` from `src/api/me.ts` — calls `GET /me` with Bearer token |
 | Code/technical text | `fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'text.secondary'` |
-| Card internal gap | `gap: 2` (16px via MUI spacing) between avatar row and token section |
+| Card internal gap | `gap: 2` (16px via MUI spacing) between avatar row and sub section |
 
 **Pattern notes:**
-The centered 560px card layout is the canonical detail-page pattern. Every detail page (bookmark detail, collection detail) should use the same `maxWidth: 560, mx: 'auto'` wrapper and `Card variant="outlined"` container. Avatar with fallback initial is the user-avatar pattern. `var(--font-mono)` at 0.75rem is used for URLs, tokens, and machine-readable text.
+The centered 560px card layout is the canonical detail-page pattern. Every detail page (bookmark detail, collection detail) should use the same `maxWidth: 560, mx: 'auto'` wrapper and `Card variant="outlined"` container. Avatar with fallback initial is the user-avatar pattern. `var(--font-mono)` at 0.75rem is used for machine-readable text. User data comes from the backend `/me` endpoint, not from Auth0 ID token claims.
 
 ### ErrorSnackbar (global error display)
 
@@ -158,7 +158,7 @@ This is the single global error surface for the app. Any component can call `sho
 ### App (layout shell)
 
 File: `frontend/src/App.tsx`
-Last updated: 2026-08-06
+Last updated: 2026-08-10
 
 | Property | Value |
 |----------|-------|
@@ -166,8 +166,10 @@ Last updated: 2026-08-06
 | Sidebar width | 240px |
 | Sidebar padding | 16px (spacing unit 2) |
 | Sidebar border | 1px `divider` on right edge |
+| Sidebar internal layout | `display: 'flex', flexDirection: 'column'` |
+| LogoutButton position | Bottom of sidebar via `mt: 'auto'` |
 | Main padding | 24px (spacing unit 3) |
 | Background | Inherited from theme (`--background`) |
 
 **Pattern notes:**
-Sidebar is a placeholder — navigation links will be added in a later phase. The flex layout and border pattern should be preserved when adding nav items.
+Sidebar uses flex column layout so the `LogoutButton` stays pinned to the bottom while future nav items fill the top. The flex layout and border pattern should be preserved when adding nav items.

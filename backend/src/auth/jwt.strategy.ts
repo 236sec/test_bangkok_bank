@@ -34,6 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       );
     }
 
+    // Strip protocol prefix if present — the domain should be just the hostname
+    // (e.g. "dev-yg.us.auth0.com", not "https://dev-yg.us.auth0.com").
+    const domain = auth0Domain.replace(/^https?:\/\//, '');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       // jwks-rsa 4.x integration for passport-jwt: resolves the signing key from
@@ -43,9 +47,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         cache: true,
         rateLimit: true,
         jwksRequestsPerMinute: 5,
-        jwksUri: `https://${auth0Domain}/.well-known/jwks.json`,
+        jwksUri: `https://${domain}/.well-known/jwks.json`,
       }),
-      issuer: `https://${auth0Domain}/`,
+      issuer: `https://${domain}/`,
       audience: auth0Audience,
       algorithms: ['RS256'],
     });

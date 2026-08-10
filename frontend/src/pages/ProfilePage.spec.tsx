@@ -3,23 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErrorProvider } from '../error/ErrorContext';
 import ProfilePage from './ProfilePage';
 
-const { mockAuth } = vi.hoisted(() => ({
+const { mockAuth, mockFetchMe } = vi.hoisted(() => ({
   mockAuth: {
     isLoading: false,
     isAuthenticated: true,
-    user: {
-      name: 'Ada Lovelace',
-      email: 'ada@example.com',
-      picture: 'https://example.com/ada.png',
-    },
+    user: null,
     loginWithRedirect: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     getAccessTokenSilently: vi.fn().mockResolvedValue('test-access-token'),
   },
+  mockFetchMe: vi.fn().mockResolvedValue({ sub: 'auth0|user-123' }),
 }));
 
 vi.mock('@auth0/auth0-react', () => ({
   useAuth0: () => mockAuth,
+}));
+
+vi.mock('../api/me', () => ({
+  fetchMe: mockFetchMe,
 }));
 
 describe('ProfilePage', () => {
@@ -27,30 +28,29 @@ describe('ProfilePage', () => {
     vi.clearAllMocks();
     mockAuth.isLoading = false;
     mockAuth.isAuthenticated = true;
+    mockFetchMe.mockResolvedValue({ sub: 'auth0|user-123' });
   });
 
-  it('renders the signed-in user name, email, and avatar', () => {
+  it('renders the user sub from /me', async () => {
     render(
       <ErrorProvider>
         <ProfilePage />
       </ErrorProvider>,
     );
 
-    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('ada@example.com')).toBeInTheDocument();
-    expect(screen.getByAltText('Ada Lovelace')).toHaveAttribute(
-      'src',
-      'https://example.com/ada.png',
-    );
+    expect(await screen.findAllByText('auth0|user-123')).toHaveLength(2);
   });
 
-  it('shows the access token once it resolves', async () => {
+  it('calls fetchMe with the access token', async () => {
     render(
       <ErrorProvider>
         <ProfilePage />
       </ErrorProvider>,
     );
 
-    expect(await screen.findByText('test-access-token')).toBeInTheDocument();
+    await screen.findAllByText('auth0|user-123');
+
+    expect(mockAuth.getAccessTokenSilently).toHaveBeenCalledTimes(1);
+    expect(mockFetchMe).toHaveBeenCalledWith('test-access-token');
   });
 });

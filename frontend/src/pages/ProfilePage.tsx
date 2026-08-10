@@ -1,13 +1,25 @@
 import { Avatar, Box, Card, CardContent, Typography } from '@mui/material';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useEffect, useState } from 'react';
+import { fetchMe, type MeResponse } from '../api/me';
 import AuthGuard from '../auth/AuthGuard';
-import { useAuthenticatedUser } from '../auth/useAuthenticatedUser';
+import { useError } from '../error/useError';
 
 function ProfileContent() {
-  const { user, accessToken } = useAuthenticatedUser();
+  const { getAccessTokenSilently } = useAuth0();
+  const { showError } = useError();
+  const [profile, setProfile] = useState<MeResponse | null>(null);
 
-  const name = user?.name || user?.email || 'Unknown user';
-  const email = user?.email || 'No email on file';
-  const picture = user?.picture;
+  useEffect(() => {
+    getAccessTokenSilently()
+      .then((token) => fetchMe(token))
+      .then((data) => setProfile(data))
+      .catch(() => {
+        showError('Your session has expired. Please log in again to continue.');
+      });
+  }, [getAccessTokenSilently, showError]);
+
+  const sub = profile?.sub || 'Unknown user';
 
   return (
     <Box sx={{ maxWidth: 560, mx: 'auto' }}>
@@ -19,8 +31,6 @@ function ProfileContent() {
         <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Avatar
-              src={picture}
-              alt={name}
               sx={{
                 width: 64,
                 height: 64,
@@ -28,20 +38,20 @@ function ProfileContent() {
                 color: 'primary.contrastText',
               }}
             >
-              {name.charAt(0).toUpperCase()}
+              {sub.charAt(0).toUpperCase()}
             </Avatar>
             <Box>
-              <Typography variant="h6">{name}</Typography>
+              <Typography variant="h6">{sub}</Typography>
               <Typography variant="body2" color="text.secondary">
-                {email}
+                Authenticated via Auth0
               </Typography>
             </Box>
           </Box>
 
-          {accessToken ? (
+          {profile ? (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Access token (truncated, demo only)
+                User ID (sub claim)
               </Typography>
               <Typography
                 component="code"
@@ -52,7 +62,7 @@ function ProfileContent() {
                   wordBreak: 'break-all',
                 }}
               >
-                {truncateToken(accessToken)}
+                {profile.sub}
               </Typography>
             </Box>
           ) : null}
@@ -60,13 +70,6 @@ function ProfileContent() {
       </Card>
     </Box>
   );
-}
-
-function truncateToken(token: string, maxLength = 80): string {
-  if (token.length <= maxLength) {
-    return token;
-  }
-  return `${token.slice(0, maxLength)}…`;
 }
 
 export default function ProfilePage() {
