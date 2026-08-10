@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ErrorProvider } from '../error/ErrorContext';
 import AuthGuard from './AuthGuard';
 
 const { mockAuth } = vi.hoisted(() => ({
@@ -28,9 +29,11 @@ describe('AuthGuard', () => {
     mockAuth.isLoading = true;
 
     render(
-      <AuthGuard>
-        <div>Protected content</div>
-      </AuthGuard>,
+      <ErrorProvider>
+        <AuthGuard>
+          <div>Protected content</div>
+        </AuthGuard>
+      </ErrorProvider>,
     );
 
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
@@ -41,9 +44,11 @@ describe('AuthGuard', () => {
     mockAuth.isAuthenticated = false;
 
     render(
-      <AuthGuard>
-        <div>Protected content</div>
-      </AuthGuard>,
+      <ErrorProvider>
+        <AuthGuard>
+          <div>Protected content</div>
+        </AuthGuard>
+      </ErrorProvider>,
     );
 
     expect(mockAuth.loginWithRedirect).toHaveBeenCalledTimes(1);
@@ -52,9 +57,11 @@ describe('AuthGuard', () => {
 
   it('renders children when authenticated', () => {
     render(
-      <AuthGuard>
-        <div>Protected content</div>
-      </AuthGuard>,
+      <ErrorProvider>
+        <AuthGuard>
+          <div>Protected content</div>
+        </AuthGuard>
+      </ErrorProvider>,
     );
 
     expect(screen.getByText('Protected content')).toBeInTheDocument();

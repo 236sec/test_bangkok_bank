@@ -2,6 +2,7 @@ import { Box, CircularProgress } from '@mui/material';
 import { useAuth0 } from '@auth0/auth0-react';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
+import { useError } from '../error/useError';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -9,12 +10,15 @@ interface AuthGuardProps {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+  const { showError } = useError();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      loginWithRedirect().catch(console.error);
+      loginWithRedirect().catch(() => {
+        showError('Unable to redirect to the login page. Please try again.');
+      });
     }
-  }, [isAuthenticated, isLoading, loginWithRedirect]);
+  }, [isAuthenticated, isLoading, loginWithRedirect, showError]);
 
   if (isLoading) {
     return (
