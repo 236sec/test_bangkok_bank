@@ -52,6 +52,9 @@ const router = createBrowserRouter([
         ),
       },
       { path: 'profile', element: <ProfilePage /> },
+      // Auth0 redirects back to /callback after login — the SDK processes
+      // the code exchange automatically when the component tree mounts.
+      { path: 'callback', element: null },
     ],
   },
 ]);
