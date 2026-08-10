@@ -70,8 +70,18 @@ Update the relevant context file whenever implementation changes:
 ## Before Moving to the Next Unit
 
 1. The current unit works end to end within its defined scope.
-2. All tests pass (green) and the red-green-refactor cycle was followed for every feature.
-3. No invariant defined in `architecture.md` was violated.
-4. `progress-tracker.md` (and `ui-registry.md` for UI work) reflects the completed work.
-5. Build passes (`cd frontend && bun run build` and `cd backend && npm run build`).
-6. Lint passes (`cd frontend && npm run lint` and `cd backend && npm run lint`).
+2. No invariant defined in `architecture.md` was violated.
+3. `progress-tracker.md` (and `ui-registry.md` for UI work) reflects the completed work.
+
+## Validation Gate (no-mistakes)
+
+Once the current unit is committed on a feature branch, validate it through the `no-mistakes` pipeline instead of running manual build/lint/test checks:
+
+```sh
+no-mistakes axi run --intent "<what the user set out to accomplish>"
+```
+
+The pipeline handles review, test, lint, build, push, PR, and CI automatically. Follow the validate-and-decide loop in the `/no-mistakes` skill — respond to gates as they appear, escalate `ask-user` findings to the user, and only proceed past a `checks-passed` outcome.
+
+- Never hand-rebase, force-push, or manually fix findings while a run is active — the pipeline owns the branch.
+- Do not treat local build/lint/test as a substitute for the gate — the pipeline validates what you committed, not your working tree.
