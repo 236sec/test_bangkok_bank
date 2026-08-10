@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router';
 import App from './App';
 import Auth0Provider from './auth/Auth0Provider';
+import AuthGuard from './auth/AuthGuard';
 import { ErrorProvider, ErrorSnackbar } from './error';
 import ProfilePage from './pages/ProfilePage';
 
@@ -18,10 +19,38 @@ const router = createBrowserRouter([
       </Auth0Provider>
     ),
     children: [
-      { index: true, element: <div>Dashboard</div> },
-      { path: 'collections', element: <div>Collections</div> },
-      { path: 'bookmarks', element: <div>Bookmarks</div> },
-      { path: 'all', element: <div>All</div> },
+      {
+        index: true,
+        element: (
+          <AuthGuard>
+            <div>Dashboard</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'collections',
+        element: (
+          <AuthGuard>
+            <div>Collections</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'bookmarks',
+        element: (
+          <AuthGuard>
+            <div>Bookmarks</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'all',
+        element: (
+          <AuthGuard>
+            <div>All</div>
+          </AuthGuard>
+        ),
+      },
       { path: 'profile', element: <ProfilePage /> },
     ],
   },
