@@ -22,7 +22,7 @@ export default function Auth0Provider({ children }: Auth0ProviderProps) {
       domain={env.VITE_AUTH0_DOMAIN}
       clientId={env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/callback`,
         audience: env.VITE_AUTH0_AUDIENCE,
       }}
       onRedirectCallback={handleRedirectCallback}
