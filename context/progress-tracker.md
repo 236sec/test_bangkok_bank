@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Phase 2 (Collections CRUD) — **Complete**. Both 2.1 (API) and 2.2 (Page) done. Next: Phase 3 (Bookmarks CRUD).
+- Phase 3 (Bookmarks CRUD) — **Complete**. Both 3.1 (API) and 3.2 (Page) done. Next: Phase 4 (All View).
 
 ## Current Goal
 
-- Phase 3 (Bookmarks CRUD) — API + page with URL metadata fetch.
+- Phase 4 (All View) — `/all` page with collections and nested bookmarks.
 
 ## Completed
 
@@ -36,8 +36,7 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Phase 3 — Bookmarks CRUD (API + page, URL metadata fetch).
-2. Phase 4 — `/all` page.
+1. Phase 4 — `/all` page.
 
 ## Open Questions
 
@@ -66,4 +65,4 @@ Update this file after every meaningful implementation change.
 - 2026-08-10: Review fixes + port reassignment + auth flow hardening. (1) Ports: frontend dev server → 3000 (was 5173), backend → 8080 (was 3000) — updated `vite.config.ts`, `Dockerfile`s, `docker-compose.yml`, `cypress.config.ts`, `env.ts`, `main.ts`. (2) `vitest.config.ts` gained `clearMocks: true` + `testTimeout: 10_000`. (3) `LoginButton` removed as dead code — `AuthGuard` handles login redirect automatically on every route. (4) `AuthGuard` now uses `showError()` from global error context instead of `console.error` when redirect fails; spec updated to wrap in `<ErrorProvider>`. (5) `Auth0Provider` `redirect_uri` set to `${window.location.origin}/callback` to match Auth0 app config. (6) `/callback` route added to router (renders `null`) to prevent React Router 404 on Auth0 post-login redirect. (7) All child routes now wrapped in `AuthGuard` — unauthenticated users redirect to Auth0 immediately. (8) `LogoutButton` added to App sidebar (bottom, `mt: 'auto'`). (9) ProfilePage now calls `GET /me` via `fetchMe()` from `src/api/me.ts` instead of `useAuth0().user` (ID token claims). `useAuthenticatedUser` hook removed as dead code. (10) CORS enabled on backend (`app.enableCors({ origin: 'http://localhost:3000' })`). (11) `JwtStrategy` strips `https://` prefix from `AUTH0_DOMAIN` if accidentally included. Auth0 domain is `dev-yg.us.auth0.com`, audience is `https://bbl-candidate-test-api`. All 17 frontend + 9 backend tests green, lint + build green.
 - 2026-08-11: Fix — wrapped `/collections` and `/collections/:id` frontend routes in `<AuthGuard>`. Created `useAccessToken` hook (`src/auth/useAccessToken.ts`) to replace repeated `useAuth0().getAccessTokenSilently()` boilerplate across `ProfilePage`, `CollectionsPage`, and `CollectionDetailPage`. Hook wraps token fetch in error handling via global `useError`. Exported from `auth/index.ts` barrel. All 3 pages updated.
 - 2026-08-11: Fix — wrapped `/collections` and `/collections/:id` frontend routes in `<AuthGuard>`. Backend was already protected with `@UseGuards(JwtAuthGuard)`, but the router was rendering collection pages without the auth gate (unauthenticated users could see page UI, though API calls would 401).
-- 2026-08-10 (later): Phase 2 (Collections CRUD) complete — both backend API (2.1) and frontend page (2.2) implemented TDD. **Backend**: `src/collections/` module with 5 DTOs (Create/Update/Patch/Query/Response), service with `$transaction` for delete (nullifies bookmark collectionId before deleting), controller with full REST: POST/GET/GET:id/PUT/PATCH/DELETE. 23 integration tests + 18 unit tests. **Frontend**: API client (`src/api/collections.ts`), 4 components (`CollectionCard`, `CollectionDialog` create/edit, `DeleteCollectionDialog` confirmation, `CollectionList`), 2 pages (`CollectionsPage` with debounced search + sort, `CollectionDetailPage` metadata-only). Router updated with `/collections` and `/collections/:id` routes. Delete uses confirmation dialog (added per user feedback). Detail page shows metadata only — bookmark list deferred to Phase 4 `/all`. 99 total tests (50 backend + 49 frontend), lint + build green.
+- 2026-08-11: Phase 3 (Bookmarks CRUD) complete — both backend API (3.1) and frontend page (3.2) implemented TDD. **Backend**: `src/bookmarks/` module with 5 DTOs (Create/Update/Patch/Query/Response), service with URL metadata fetching (title + favicon via HTML parsing, 8s timeout, graceful degradation), controller with full REST: POST/GET/GET:id/PUT/PATCH/DELETE. Added `GET /collections/:id/bookmarks` to existing `CollectionsController`. 64 new tests (unit + integration), 120 total. **Frontend**: API client (`src/api/bookmarks.ts` — 7 functions), 4 components (`BookmarkCard` with favicon/fallback + mono URL + collection chip, `BookmarkDialog` create/edit with Autocomplete collection selector, `DeleteBookmarkDialog`, `BookmarkList`), 2 pages (`BookmarksPage` with dual search + sort + dialogs, `BookmarkDetailPage` with metadata + clickable URL + edit/delete). Router updated with `/bookmarks` and `/bookmarks/:id` routes. 36 new tests, 90 total. Post-review: 2 critical fixes (null collectionId PATCH, empty title create), 1 important fix (merged dual debounce into single effect). Lint + build green both sides. Favicon stored as URL string — no description field (per user decision). Context files updated: progress-tracker, ui-registry.

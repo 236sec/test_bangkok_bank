@@ -286,3 +286,127 @@ Last updated: 2026-08-10
 
 **Pattern notes:**
 This is the canonical detail-page pattern (alongside ProfilePage). Every detail page should use the centered 560px layout, back-link button with `ArrowBackIcon`, `Card variant="outlined"` for detail content, skeleton card while loading, and `useError().showError()` for fetch failures.
+
+---
+
+### Bookmarks API (Phase 3.2)
+
+File: `frontend/src/api/bookmarks.ts`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Auth | `Authorization: Bearer ${accessToken}` header (first arg), same as collections API |
+| Query params | `new URL()` + `searchParams.set()` for title, url, sortBy, sortOrder |
+| Error messaging | `/${endpoint}/${id} returned ${status}` pattern |
+| Return types | `Promise<Bookmark[]>` / `Promise<Bookmark>` / `Promise<void>` (204 delete) |
+| Functions | fetchBookmarks, fetchBookmark, createBookmark, updateBookmark, patchBookmark, deleteBookmark, fetchCollectionBookmarks |
+
+---
+
+### BookmarkCard (Phase 3.2)
+
+File: `frontend/src/components/bookmarks/BookmarkCard.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Card variant="outlined"` with `CardActionArea` for click |
+| Layout | `CardContent` with `display: 'flex', alignItems: 'center', justifyContent: 'space-between'` |
+| Favicon | `<img>` 24×24px `borderRadius: 'var(--radius-xs)'` when favicon URL exists |
+| Favicon fallback | `LanguageIcon fontSize={24} color="text.secondary"` when favicon is null |
+| Title | `Typography variant="subtitle1"` with ellipsis overflow `whiteSpace: 'nowrap'` |
+| URL | `Typography variant="body2" color="text.secondary" fontFamily: 'var(--font-mono)'` truncated to 50 chars |
+| Collection chip | `Chip size="small"` shown only when `collection` is set |
+| Edit action | `IconButton size="small"` + `EditIcon fontSize="small"` `aria-label="Edit bookmark"` |
+| Delete action | `IconButton size="small"` + `DeleteIcon fontSize="small" color="error"` `aria-label="Delete bookmark"` |
+| Action click | `e.stopPropagation()` to prevent card click |
+
+---
+
+### BookmarkDialog (Phase 3.2)
+
+File: `frontend/src/components/bookmarks/BookmarkDialog.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Dialog maxWidth="sm" fullWidth` with `slotProps.paper.sx={{ borderRadius: 'var(--radius-lg)' }}` |
+| Title | Create: "New Bookmark", Edit: "Edit Bookmark" |
+| Fields | URL (`TextField autoFocus`), Title, Notes (multiline maxRows=3), Collection (`Autocomplete` single-select) |
+| Validation | URL: valid URL check on blur, Title: max 200 chars, Notes: max 500 chars |
+| Collection loader | Fetches via `fetchCollections()` on open, shows "None" option |
+| Primary disabled | URL empty or invalid (create), URL/title empty or unchanged (edit), submitting |
+| State reset | `TransitionProps.onEntered` resets all fields + errors + isSubmitting |
+| Type-safe props | Discriminated union: `CreateModeProps` (onCreate) vs `EditModeProps` (onSave + bookmark) |
+
+---
+
+### DeleteBookmarkDialog (Phase 3.2)
+
+File: `frontend/src/components/bookmarks/DeleteBookmarkDialog.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Dialog maxWidth="xs" fullWidth` with `--radius-lg` |
+| Title | "Delete bookmark?" |
+| Content | `DialogContentText` with bookmark title interpolated in warning |
+| Actions | "Cancel" (`Button`) + "Delete" (`Button variant="contained" color="error"`) |
+| Loading state | Both buttons disabled while deleting |
+| Close guard | `onClose` disabled while deleting |
+| State reset | `TransitionProps.onEntered` resets isDeleting |
+
+---
+
+### BookmarkList (Phase 3.2)
+
+File: `frontend/src/components/bookmarks/BookmarkList.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Box` flex column with `gap: 1.5` |
+| Items | Maps `bookmarks` array to `BookmarkCard` with edit/delete/click callbacks |
+
+---
+
+### BookmarksPage (Phase 3.2)
+
+File: `frontend/src/pages/BookmarksPage.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Page width | `maxWidth: 560, mx: 'auto'` (matches CollectionsPage) |
+| Page title | `Typography variant="h4" component="h1"` with `mb: 3` |
+| Search inputs | Two `TextField size="small"` — "Search by title…" and "Search by URL…" — each with `SearchIcon` adornment |
+| Sort control | `FormControl size="small"` + `Select` with 4 options (Newest/Oldest/A–Z/Z–A) |
+| Create button | `Button variant="contained"` with `AddIcon startIcon` — "New Bookmark" |
+| Loading state | 3× `Skeleton variant="rounded" height={72}` in flex column with `gap: 1.5` |
+| Empty state | `BookmarkAddIcon fontSize={64} color="text.secondary"` + "No bookmarks yet" + "Save your first link" CTA |
+| No results state | `SearchOffIcon fontSize={64}` + "No bookmarks found" message |
+| Search debounce | 300ms per-field via `useRef<setTimeout>` + cleanup |
+| Delete | Optimistic: filters from state array, reloads on error |
+| Auth | Page wrapped in `<AuthGuard>` |
+
+---
+
+### BookmarkDetailPage (Phase 3.2)
+
+File: `frontend/src/pages/BookmarkDetailPage.tsx`
+Last updated: 2026-08-11
+
+| Property | Pattern |
+|----------|---------|
+| Page width | `maxWidth: 560, mx: 'auto'` (matches ProfilePage/CollectionDetailPage) |
+| Back link | `Button component={Link} to="/bookmarks" startIcon={<ArrowBackIcon />}` with `mb: 2` |
+| Detail card | `Card variant="outlined"` with `CardContent` flex column `gap: 1.5` |
+| Favicon | `<img>` 32×32px `--radius-xs` or `LanguageIcon fontSize={32}` fallback |
+| URL link | `Typography variant="body2" component="a"` mono font, `target="_blank"`, `OpenInNewIcon` |
+| Notes | Conditional: only renders when `bookmark.notes` is non-null |
+| Collection chip | `Chip component={Link} to={/collections/:id}` clickable, only when assigned |
+| Edit/Delete buttons | `Button variant="outlined"` (Edit) / `color="error"` (Delete) below card |
+| 404 state | "Bookmark not found" with explanation |
+| Loading state | `Skeleton variant="text"` inside `Card variant="outlined"` — 5 lines |
+| Auth | Page wrapped in `<AuthGuard>` |

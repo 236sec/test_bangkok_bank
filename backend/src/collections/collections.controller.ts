@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequestWithUser } from '../auth/jwt.strategy';
+import { BookmarksService } from '../bookmarks/bookmarks.service';
 import { CollectionsService } from './collections.service';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
@@ -23,11 +24,15 @@ import { PatchCollectionDto } from './dto/patch-collection.dto';
 import { QueryCollectionsDto } from './dto/query-collections.dto';
 import type { CollectionResponse } from './dto/collection.response';
 import type { Collection } from '../../generated/prisma/client';
+import type { BookmarkResponse } from '../bookmarks/dto/bookmark.response';
 
 @Controller('collections')
 @UseGuards(JwtAuthGuard)
 export class CollectionsController {
-  constructor(private readonly collectionsService: CollectionsService) {}
+  constructor(
+    private readonly collectionsService: CollectionsService,
+    private readonly bookmarksService: BookmarksService,
+  ) {}
 
   @Post()
   async create(
@@ -43,6 +48,21 @@ export class CollectionsController {
     @Query() query: QueryCollectionsDto,
   ): Promise<CollectionResponse[]> {
     return this.collectionsService.findAll(req.user.sub, query);
+  }
+
+  @Get(':id/bookmarks')
+  async findBookmarks(
+    @Req() req: RequestWithUser,
+    @Param('id') id: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ): Promise<BookmarkResponse[]> {
+    return this.bookmarksService.findByCollection(
+      id,
+      req.user.sub,
+      sortBy,
+      sortOrder,
+    );
   }
 
   @Get(':id')

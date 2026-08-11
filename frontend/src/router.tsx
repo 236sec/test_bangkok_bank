@@ -5,6 +5,8 @@ import AuthGuard from './auth/AuthGuard';
 import { ErrorProvider, ErrorSnackbar } from './error';
 import CollectionDetailPage from './pages/CollectionDetailPage';
 import CollectionsPage from './pages/CollectionsPage';
+import BookmarksPage from './pages/BookmarksPage';
+import BookmarkDetailPage from './pages/BookmarkDetailPage';
 import ProfilePage from './pages/ProfilePage';
 
 const router = createBrowserRouter([
@@ -49,7 +51,15 @@ const router = createBrowserRouter([
         path: 'bookmarks',
         element: (
           <AuthGuard>
-            <div>Bookmarks</div>
+            <BookmarksPage />
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'bookmarks/:id',
+        element: (
+          <AuthGuard>
+            <BookmarkDetailPage />
           </AuthGuard>
         ),
       },
