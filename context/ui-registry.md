@@ -11,10 +11,18 @@ This file keeps the component inventory visible — what exists, where it lives,
 | App (layout shell) | `src/App.tsx` | Authenticated shell: persistent left sidebar with LogoutButton pinned to bottom + scrollable main content area rendering child routes via `<Outlet />`. | MUI `Box` with flex column sidebar, `borderColor: 'divider'` (token), LogoutButton at bottom via `mt: 'auto'`, tokens via themed palette only |
 | Auth0Provider | `src/auth/Auth0Provider.tsx` | Wraps app in `@auth0/auth0-react` `Auth0Provider` (PKCE, refresh tokens, localstorage cache); `onRedirectCallback` navigates to `appState.returnTo || '/profile'`; `redirect_uri` set to `${window.location.origin}/callback`. | MUI-free; React Router `useNavigate`; env via `../env` |
 | AuthGuard | `src/auth/AuthGuard.tsx` | Route guard: shows `CircularProgress` while loading, calls `loginWithRedirect()` when unauthenticated, renders children when authenticated. Redirect failures surface via global `useError().showError()`. | MUI `CircularProgress` centered in `Box`; `useAuth0`; `useError` |
+| useAccessToken | `src/auth/useAccessToken.ts` | Hook wrapping `useAuth0().getAccessTokenSilently()` with global error handling. Returns a stable `getToken()` callback. On failure, surfaces "Your session has expired" via `ErrorSnackbar` and re-throws. | `useAuth0`; `useError`; `useCallback` |
 | LogoutButton | `src/auth/LogoutButton.tsx` | Calls `logout({ logoutParams: { returnTo: window.location.origin } })`; disabled while loading. | MUI `Button` outlined/primary |
-| ProfilePage | `src/pages/ProfilePage.tsx` | Displays user identity from `GET /me` (currently `{ sub }`): avatar with initial, sub value, and full sub in mono. Wrapped in `AuthGuard`. | MUI `Card` (outlined), `Avatar` (primary bg), `Typography`; `fetchMe()` API client; mono font token `var(--font-mono)`; `useAuth0().getAccessTokenSilently()` for Bearer token |
+| ProfilePage | `src/pages/ProfilePage.tsx` | Displays user identity from `GET /me` (currently `{ sub }`): avatar with initial, sub value, and full sub in mono. Wrapped in `AuthGuard`. | MUI `Card` (outlined), `Avatar` (primary bg), `Typography`; `fetchMe()` API client; mono font token `var(--font-mono)`; `useAccessToken()` for Bearer token |
 | ErrorProvider | `src/error/ErrorContext.tsx` | Global error context: `error` state + `showError(message)` + `clearError()` via React context. | Pure context/provider — no visual components |
 | ErrorSnackbar | `src/error/ErrorSnackbar.tsx` | Renders MUI `Snackbar` + `Alert severity="error" variant="filled"` when `useError().error` is set; auto-hides after 8s. | MUI `Snackbar` + `Alert`; `useError` hook; renders `null` when no error |
+| Collections API | `src/api/collections.ts` | API client for collections: fetchCollections (with query params), fetchCollection, create/update/patch/deleteCollection — all Bearer token auth. | Plain `fetch`, `env.VITE_API_URL`, `Authorization: Bearer` pattern (same as `me.ts`) |
+| CollectionCard | `src/components/collections/CollectionCard.tsx` | Card showing collection name, bookmark count, edit/delete actions. Click navigates to detail. | MUI `Card variant="outlined"`, `CardActionArea`, `IconButton` with `EditIcon`/`DeleteIcon color="error"`, `stopPropagation` on actions |
+| CollectionDialog | `src/components/collections/CollectionDialog.tsx` | Reusable dialog for create AND edit modes. Auto-focused text field, validation on blur, loading state. | MUI `Dialog` with `--radius-lg` (12px), `TextField autoFocus`, `Button variant="contained"` primary, `TransitionProps.onEntered` for state reset (avoid setState-in-effect) |
+| DeleteCollectionDialog | `src/components/collections/DeleteCollectionDialog.tsx` | Confirmation dialog before deleting a collection. Shows collection name in warning. | MUI `Dialog` with `--radius-lg`, `DialogContentText`, `Button color="error"` for destructive action, `TransitionProps.onEntered` for state reset |
+| CollectionList | `src/components/collections/CollectionList.tsx` | Simple vertical list wrapper rendering `CollectionCard` for each collection. | MUI `Box` flex column with `gap: 1.5` |
+| CollectionsPage | `src/pages/CollectionsPage.tsx` | Full collections list page: search (300ms debounce), sort (Newest/Oldest/A–Z/Z–A), skeleton loaders, empty state with FolderOpenIcon, create/edit/delete dialogs. Wrapped in `AuthGuard`. | MUI `maxWidth: 560, mx: 'auto'`, `Typography h4`, `Skeleton variant="rounded"`, `Select` for sort, `FolderOpenIcon` 64px empty state, `SearchIcon` input adornment, `AddIcon` button |
+| CollectionDetailPage | `src/pages/CollectionDetailPage.tsx` | Single collection detail at `/collections/:id`: name, bookmark count, created/updated timestamps, back link. Skeleton loader. Wrapped in `AuthGuard`. | MUI `maxWidth: 560, mx: 'auto'`, `Typography h4`, `Card variant="outlined"`, `Button component={Link}` back navigation, `Skeleton variant="text"` loader |
 
 ## Pattern Library
 
@@ -173,3 +181,108 @@ Last updated: 2026-08-10
 
 **Pattern notes:**
 Sidebar uses flex column layout so the `LogoutButton` stays pinned to the bottom while future nav items fill the top. The flex layout and border pattern should be preserved when adding nav items.
+
+---
+
+### CollectionsPage (list + search + dialogs)
+
+File: `frontend/src/pages/CollectionsPage.tsx`
+Last updated: 2026-08-10
+
+| Property | Pattern |
+|----------|---------|
+| Page width | `maxWidth: 560, mx: 'auto'` (centered, constrained) |
+| Page title | `Typography variant="h4" component="h1"` with `mb: 3` |
+| Search input | MUI `TextField size="small"` with `SearchIcon` `InputAdornment`, `placeholder="Search collections…"` |
+| Sort control | MUI `FormControl size="small"` + `Select` + `InputLabel` with 4 options (Newest/Oldest/A–Z/Z–A) |
+| Create button | MUI `Button variant="contained"` with `AddIcon startIcon` |
+| Loading state | 3× MUI `Skeleton variant="rounded" height={72}` in flex column with `gap: 1.5` |
+| Empty state | Centered `FolderOpenIcon fontSize={64} color="text.secondary"` + "No collections yet" title + "Create your first collection" CTA |
+| Card list | `CollectionList` vertical flex column with `gap: 1.5` |
+| Card click | `useNavigate()` → `/collections/:id` |
+| Search debounce | 300ms via `useRef<setTimeout>` + cleanup |
+| API errors | Surfaced via `useError().showError()` |
+| Auth | Page wrapped in `<AuthGuard>` |
+
+**Pattern notes:**
+This is the canonical list-page pattern. Every list page (BookmarksPage, AllPage) should follow the same structure: search bar + sort + create button on top, skeleton loaders while fetching, empty state when no data, card-based list with edit/delete actions, and dialogs for create/edit/delete. Use 300ms debounce for search. Centered 560px layout matches ProfilePage. Follow the `useAccessToken()` → API client → setState pattern. Dialog state management uses separate boolean/collection state variables (not a single "active" state). Use `TransitionProps.onEntered` for dialog form reset instead of `useEffect` with setState (React 19 compiler compatibility).
+
+### CollectionCard
+
+File: `frontend/src/components/collections/CollectionCard.tsx`
+Last updated: 2026-08-10
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Card variant="outlined"` with `CardActionArea` for click |
+| Layout | `CardContent` with `display: 'flex', alignItems: 'center', justifyContent: 'space-between'` |
+| Name | `Typography variant="h6"` |
+| Bookmark count | `Typography variant="body2" color="text.secondary"` — `${count} bookmark(s)` |
+| Edit action | MUI `IconButton size="small"` + `EditIcon fontSize="small"`, `aria-label="Edit collection"` |
+| Delete action | MUI `IconButton size="small"` + `DeleteIcon fontSize="small"` `color="error"`, `aria-label="Delete collection"` |
+| Action click | `e.stopPropagation()` to prevent card click |
+| Missing count | `_count?.bookmarks ?? 0` — displays "0 bookmarks" gracefully |
+
+**Pattern notes:**
+`CardActionArea` makes the entire card clickable. Edit/delete buttons use `stopPropagation` so they don't trigger the card navigation. Icons are `fontSize="small"` (20px) for inline use. Destructive actions use `color="error"` (maps to `var(--destructive)`). Always handle `_count` being undefined.
+
+### CollectionDialog (create/edit modal)
+
+File: `frontend/src/components/collections/CollectionDialog.tsx`
+Last updated: 2026-08-10
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Dialog maxWidth="xs" fullWidth` with `slotProps.paper.sx={{ borderRadius: 'var(--radius-lg)' }}` |
+| Title | Create: "New Collection", Edit: "Edit Collection" |
+| Field | MUI `TextField autoFocus fullWidth label="Collection name"` |
+| Actions | "Cancel" (`Button`) + "Create"/"Save" (`Button variant="contained"`) |
+| Primary disabled | Name empty OR (edit mode) name unchanged from initial value OR submitting |
+| Submit on Enter | `htmlInput.onKeyDown` handler for Enter key |
+| Loading state | Primary button disabled while submitting; Cancel also disabled |
+| State reset | `TransitionProps.onEntered` callback resets name + isSubmitting |
+| Close guard | `onClose` disabled (undefined) while submitting |
+| Error handling | Throws are caught, isSubmitting reset — parent surfaces via `useError().showError()` |
+| Type-safe props | Discriminated union: `CreateModeProps` (onCreate) vs `EditModeProps` (onSave + collection) |
+
+**Pattern notes:**
+This is the canonical modal pattern for the app. Every create/edit dialog should follow this structure: discriminated union for mode-specific props, `TransitionProps.onEntered` for state reset (NOT useEffect setState — React 19 compiler lint), primary button disabled logic, Enter key submit, close prevention while submitting. `--radius-lg` (12px) is the canonical dialog border radius.
+
+### DeleteCollectionDialog (confirmation modal)
+
+File: `frontend/src/components/collections/DeleteCollectionDialog.tsx`
+Last updated: 2026-08-10
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Dialog maxWidth="xs" fullWidth` with `--radius-lg` |
+| Title | "Delete collection?" |
+| Content | `DialogContentText` with collection name interpolated in warning message |
+| Actions | "Cancel" (`Button`) + "Delete" (`Button variant="contained" color="error"`) |
+| Loading state | Both buttons disabled while deleting |
+| Close guard | `onClose` disabled while deleting |
+| State reset | `TransitionProps.onEntered` resets isDeleting |
+
+**Pattern notes:**
+This is the canonical delete confirmation pattern. Every delete dialog should: show the item name in the warning message, use `color="error"` for the destructive button, disable close while the delete is in progress, and reset state on dialog enter. The parent should handle optimistic removal + restore on error via `useError().showError()`.
+
+### CollectionDetailPage (detail view)
+
+File: `frontend/src/pages/CollectionDetailPage.tsx`
+Last updated: 2026-08-10
+
+| Property | Pattern |
+|----------|---------|
+| Page width | `maxWidth: 560, mx: 'auto'` (matches ProfilePage) |
+| Back link | MUI `Button component={Link} to="/collections" startIcon={<ArrowBackIcon />}` with `mb: 2` |
+| Title | `Typography variant="h4" component="h1"` with `mb: 3` |
+| Detail card | MUI `Card variant="outlined"` with `CardContent` flex column `gap: 1.5` |
+| Bookmark count | `Typography variant="body1" color="text.secondary"` — `${count} bookmark(s)` |
+| Timestamps | "Created" / "Last updated" labels in `variant="body2" color="text.secondary"` + values in `variant="body1"` |
+| Loading state | `Skeleton variant="text"` inside a `Card variant="outlined"` — 4 lines matching content shape |
+| Token | `useAccessToken()` → `fetchCollection()` |
+| Error | `useError().showError()` on fetch failure |
+| Auth | Page wrapped in `<AuthGuard>` |
+
+**Pattern notes:**
+This is the canonical detail-page pattern (alongside ProfilePage). Every detail page should use the centered 560px layout, back-link button with `ArrowBackIcon`, `Card variant="outlined"` for detail content, skeleton card while loading, and `useError().showError()` for fetch failures.

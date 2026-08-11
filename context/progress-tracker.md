@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Phase 1 (Auth & Core Data) — Phases 1.1–1.3 complete (Auth0 frontend login, backend JWT guard, `/me` endpoint). Next: prisma migrate dev + Phase 2 (Collections CRUD).
+- Phase 2 (Collections CRUD) — **Complete**. Both 2.1 (API) and 2.2 (Page) done. Next: Phase 3 (Bookmarks CRUD).
 
 ## Current Goal
 
-- Phase 1 (Auth & Core Data) — Auth0 login, JWT guard, /me endpoint, and prisma migrate dev.
+- Phase 3 (Bookmarks CRUD) — API + page with URL metadata fetch.
 
 ## Completed
 
@@ -36,10 +36,8 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. `docker compose up postgres` → `prisma migrate dev` — create initial migration from the already-written schema.
-2. Phase 2 — Collections CRUD (API + page).
-3. Phase 3 — Bookmarks CRUD (API + page, URL metadata fetch).
-4. Phase 4 — `/all` page.
+1. Phase 3 — Bookmarks CRUD (API + page, URL metadata fetch).
+2. Phase 4 — `/all` page.
 
 ## Open Questions
 
@@ -66,3 +64,6 @@ Update this file after every meaningful implementation change.
 - 2026-08-06 (later): Phase 1.1 — Auth0 frontend login implemented test-first (red → green): 4 specs (`LoginButton`, `LogoutButton`, `AuthGuard`, `ProfilePage`) written before implementations, all passing (12 tests total). `Auth0Provider` mounted inside the router per the SDK's React Router integration pattern (provider must be inside Router for `useNavigate`); `main.tsx` intentionally not wrapped to avoid a runtime `useNavigate() may be used only in the context of a <Router>` crash. `.env` still required at runtime for dev (`env.ts` throws without `VITE_AUTH0_*`) — copy `.env.example`.
 - 2026-08-06 (evening): Phase 1.2 + 1.3 — backend JWT auth implemented test-first (red → green): `src/auth/` (JwtStrategy + JwtAuthGuard + AuthModule) and `src/users/` (`/me` controller + module), `GET /health` replaces scaffold `GET /`, `AppService` removed. Key decisions: per-route `@UseGuards(JwtAuthGuard)` (not a global guard); `ownerId` = raw `sub`; `jwksRsa.passportJwtSecret` (jwks-rsa 4.x) as the secret provider — NOT `expressJwtSecret`, whose 2/4-arg callback contract is for express-jwt and would hang passport-jwt's 3-arg call; `algorithms: ['RS256']`; strategy throws at construction if `AUTH0_DOMAIN`/`AUTH0_AUDIENCE` are unset (docker-compose/env must provide them before boot). e2e infrastructure fixed (pre-existing breakage): `moduleNameMapper` for the generated Prisma client's `.js` imports, `--experimental-vm-modules` for Prisma 7's WASM query compiler under jest, `testTimeout: 30000`, and `jwks-rsa` mocked in the e2e spec (avoids loading `jose` ESM inside jest's CJS runtime). `npm run test` (9), `test:e2e` (1), `build`, `lint`, `tsc --noEmit` all green.
 - 2026-08-10: Review fixes + port reassignment + auth flow hardening. (1) Ports: frontend dev server → 3000 (was 5173), backend → 8080 (was 3000) — updated `vite.config.ts`, `Dockerfile`s, `docker-compose.yml`, `cypress.config.ts`, `env.ts`, `main.ts`. (2) `vitest.config.ts` gained `clearMocks: true` + `testTimeout: 10_000`. (3) `LoginButton` removed as dead code — `AuthGuard` handles login redirect automatically on every route. (4) `AuthGuard` now uses `showError()` from global error context instead of `console.error` when redirect fails; spec updated to wrap in `<ErrorProvider>`. (5) `Auth0Provider` `redirect_uri` set to `${window.location.origin}/callback` to match Auth0 app config. (6) `/callback` route added to router (renders `null`) to prevent React Router 404 on Auth0 post-login redirect. (7) All child routes now wrapped in `AuthGuard` — unauthenticated users redirect to Auth0 immediately. (8) `LogoutButton` added to App sidebar (bottom, `mt: 'auto'`). (9) ProfilePage now calls `GET /me` via `fetchMe()` from `src/api/me.ts` instead of `useAuth0().user` (ID token claims). `useAuthenticatedUser` hook removed as dead code. (10) CORS enabled on backend (`app.enableCors({ origin: 'http://localhost:3000' })`). (11) `JwtStrategy` strips `https://` prefix from `AUTH0_DOMAIN` if accidentally included. Auth0 domain is `dev-yg.us.auth0.com`, audience is `https://bbl-candidate-test-api`. All 17 frontend + 9 backend tests green, lint + build green.
+- 2026-08-11: Fix — wrapped `/collections` and `/collections/:id` frontend routes in `<AuthGuard>`. Created `useAccessToken` hook (`src/auth/useAccessToken.ts`) to replace repeated `useAuth0().getAccessTokenSilently()` boilerplate across `ProfilePage`, `CollectionsPage`, and `CollectionDetailPage`. Hook wraps token fetch in error handling via global `useError`. Exported from `auth/index.ts` barrel. All 3 pages updated.
+- 2026-08-11: Fix — wrapped `/collections` and `/collections/:id` frontend routes in `<AuthGuard>`. Backend was already protected with `@UseGuards(JwtAuthGuard)`, but the router was rendering collection pages without the auth gate (unauthenticated users could see page UI, though API calls would 401).
+- 2026-08-10 (later): Phase 2 (Collections CRUD) complete — both backend API (2.1) and frontend page (2.2) implemented TDD. **Backend**: `src/collections/` module with 5 DTOs (Create/Update/Patch/Query/Response), service with `$transaction` for delete (nullifies bookmark collectionId before deleting), controller with full REST: POST/GET/GET:id/PUT/PATCH/DELETE. 23 integration tests + 18 unit tests. **Frontend**: API client (`src/api/collections.ts`), 4 components (`CollectionCard`, `CollectionDialog` create/edit, `DeleteCollectionDialog` confirmation, `CollectionList`), 2 pages (`CollectionsPage` with debounced search + sort, `CollectionDetailPage` metadata-only). Router updated with `/collections` and `/collections/:id` routes. Delete uses confirmation dialog (added per user feedback). Detail page shows metadata only — bookmark list deferred to Phase 4 `/all`. 99 total tests (50 backend + 49 frontend), lint + build green.
