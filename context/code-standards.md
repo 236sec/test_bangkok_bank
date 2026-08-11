@@ -20,7 +20,7 @@
 - One module per domain: `CollectionsModule`, `BookmarksModule`, `UsersModule` (`/me`).
 - Controllers are thin — they parse/validate input and delegate to services. No business logic in controllers.
 - Services own business logic and Prisma access. Every service method that touches `Collection` or `Bookmark` must scope by `ownerId`.
-- Always apply the global auth guard. The only route exempt from auth is the health check.
+- Apply `@UseGuards(JwtAuthGuard)` per-route/controller. The only route exempt from auth is the health check.
 - Use DTOs with `class-validator` decorators for all request bodies.
 - Return consistent response shapes — entities are transformed through a presenter/serializer, never returned raw with sensitive fields.
 

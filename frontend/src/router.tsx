@@ -1,15 +1,60 @@
 import { createBrowserRouter } from 'react-router';
 import App from './App';
+import Auth0Provider from './auth/Auth0Provider';
+import AuthGuard from './auth/AuthGuard';
+import { ErrorProvider, ErrorSnackbar } from './error';
+import ProfilePage from './pages/ProfilePage';
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <App />,
+    // Auth0Provider must live inside the Router so its `onRedirectCallback`
+    // can use `useNavigate` (react-router throws outside Router context).
+    element: (
+      <Auth0Provider>
+        <ErrorProvider>
+          <App />
+          <ErrorSnackbar />
+        </ErrorProvider>
+      </Auth0Provider>
+    ),
     children: [
-      { index: true, element: <div>Dashboard</div> },
-      { path: 'collections', element: <div>Collections</div> },
-      { path: 'bookmarks', element: <div>Bookmarks</div> },
-      { path: 'all', element: <div>All</div> },
+      {
+        index: true,
+        element: (
+          <AuthGuard>
+            <div>Dashboard</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'collections',
+        element: (
+          <AuthGuard>
+            <div>Collections</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'bookmarks',
+        element: (
+          <AuthGuard>
+            <div>Bookmarks</div>
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'all',
+        element: (
+          <AuthGuard>
+            <div>All</div>
+          </AuthGuard>
+        ),
+      },
+      { path: 'profile', element: <ProfilePage /> },
+      // Auth0 redirects back to /callback after login — the SDK processes
+      // the code exchange automatically when the component tree mounts.
+      { path: 'callback', element: null },
     ],
   },
 ]);

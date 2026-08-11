@@ -13,6 +13,11 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    if (env.CHANGE_ID) {
+                        githubNotify status: 'PENDING', description: 'CI pipeline started'
+                    }
+                }
             }
         }
 
@@ -90,6 +95,20 @@ pipeline {
     }
 
     post {
+        success {
+            script {
+                if (env.CHANGE_ID) {
+                    githubNotify status: 'SUCCESS', description: 'All checks passed'
+                }
+            }
+        }
+        failure {
+            script {
+                if (env.CHANGE_ID) {
+                    githubNotify status: 'FAILURE', description: 'CI pipeline failed'
+                }
+            }
+        }
         always {
             cleanWs()
         }
