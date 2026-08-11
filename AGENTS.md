@@ -27,6 +27,7 @@ Update `context/progress-tracker.md` after each meaningful implementation change
 
 ## Available Skills
 
+- `/orchestator` — for planning and coordinating multiple agents to work together on a complex feature.
 - `/architect` — before any complex feature. Think before building.
 - `/review` — after building a feature, verify it matches the plan before demo.
 - `/recover` — when something breaks after one failed correction.

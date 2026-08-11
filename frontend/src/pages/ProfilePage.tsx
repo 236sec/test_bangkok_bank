@@ -1,23 +1,22 @@
 import { Avatar, Box, Card, CardContent, Typography } from '@mui/material';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useState } from 'react';
 import { fetchMe, type MeResponse } from '../api/me';
-import AuthGuard from '../auth/AuthGuard';
+import { AuthGuard, useAccessToken } from '../auth';
 import { useError } from '../error/useError';
 
 function ProfileContent() {
-  const { getAccessTokenSilently } = useAuth0();
+  const getToken = useAccessToken();
   const { showError } = useError();
   const [profile, setProfile] = useState<MeResponse | null>(null);
 
   useEffect(() => {
-    getAccessTokenSilently()
+    getToken()
       .then((token) => fetchMe(token))
       .then((data) => setProfile(data))
       .catch(() => {
-        showError('Your session has expired. Please log in again to continue.');
+        showError('Unable to load profile. Please try again.');
       });
-  }, [getAccessTokenSilently, showError]);
+  }, [getToken, showError]);
 
   const sub = profile?.sub || 'Unknown user';
 

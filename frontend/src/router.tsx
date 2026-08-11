@@ -3,6 +3,8 @@ import App from './App';
 import Auth0Provider from './auth/Auth0Provider';
 import AuthGuard from './auth/AuthGuard';
 import { ErrorProvider, ErrorSnackbar } from './error';
+import CollectionDetailPage from './pages/CollectionDetailPage';
+import CollectionsPage from './pages/CollectionsPage';
 import ProfilePage from './pages/ProfilePage';
 
 const router = createBrowserRouter([
@@ -31,7 +33,15 @@ const router = createBrowserRouter([
         path: 'collections',
         element: (
           <AuthGuard>
-            <div>Collections</div>
+            <CollectionsPage />
+          </AuthGuard>
+        ),
+      },
+      {
+        path: 'collections/:id',
+        element: (
+          <AuthGuard>
+            <CollectionDetailPage />
           </AuthGuard>
         ),
       },
