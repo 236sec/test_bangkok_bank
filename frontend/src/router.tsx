@@ -7,6 +7,7 @@ import CollectionDetailPage from './pages/CollectionDetailPage';
 import CollectionsPage from './pages/CollectionsPage';
 import BookmarksPage from './pages/BookmarksPage';
 import BookmarkDetailPage from './pages/BookmarkDetailPage';
+import AllPage from './pages/AllPage';
 import ProfilePage from './pages/ProfilePage';
 
 const router = createBrowserRouter([
@@ -67,7 +68,7 @@ const router = createBrowserRouter([
         path: 'all',
         element: (
           <AuthGuard>
-            <div>All</div>
+            <AllPage />
           </AuthGuard>
         ),
       },

@@ -100,6 +100,37 @@ describe('BookmarkCard', () => {
     expect(screen.getByText('Tech Bookmarks')).toBeDefined();
   });
 
+  it('hides the collection chip when showCollectionChip={false}', () => {
+    render(
+      <MemoryRouter>
+        <BookmarkCard
+          bookmark={mockBookmark}
+          showCollectionChip={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onClick={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Tech Bookmarks')).toBeNull();
+  });
+
+  it('still renders the collection chip when showCollectionChip is omitted', () => {
+    render(
+      <MemoryRouter>
+        <BookmarkCard
+          bookmark={mockBookmark}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          onClick={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Tech Bookmarks')).toBeInTheDocument();
+  });
+
   it('renders no collection chip when collection is null', () => {
     render(
       <MemoryRouter>
