@@ -17,6 +17,7 @@ interface BookmarkCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onClick: () => void;
+  showCollectionChip?: boolean;
 }
 
 export default function BookmarkCard({
@@ -24,6 +25,7 @@ export default function BookmarkCard({
   onEdit,
   onDelete,
   onClick,
+  showCollectionChip = true,
 }: BookmarkCardProps) {
   const urlSnippet =
     bookmark.url.length > 50 ? `${bookmark.url.slice(0, 50)}…` : bookmark.url;
@@ -78,7 +80,7 @@ export default function BookmarkCard({
             </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {bookmark.collection && (
+            {bookmark.collection && showCollectionChip && (
               <Chip label={bookmark.collection.name} size="small" />
             )}
             <IconButton

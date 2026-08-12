@@ -23,6 +23,8 @@ This file keeps the component inventory visible — what exists, where it lives,
 | CollectionList | `src/components/collections/CollectionList.tsx` | Simple vertical list wrapper rendering `CollectionCard` for each collection. | MUI `Box` flex column with `gap: 1.5` |
 | CollectionsPage | `src/pages/CollectionsPage.tsx` | Full collections list page: search (300ms debounce), sort (Newest/Oldest/A–Z/Z–A), skeleton loaders, empty state with FolderOpenIcon, create/edit/delete dialogs. Wrapped in `AuthGuard`. | MUI `maxWidth: 560, mx: 'auto'`, `Typography h4`, `Skeleton variant="rounded"`, `Select` for sort, `FolderOpenIcon` 64px empty state, `SearchIcon` input adornment, `AddIcon` button |
 | CollectionDetailPage | `src/pages/CollectionDetailPage.tsx` | Single collection detail at `/collections/:id`: name, bookmark count, created/updated timestamps, back link. Skeleton loader. Wrapped in `AuthGuard`. | MUI `maxWidth: 560, mx: 'auto'`, `Typography h4`, `Card variant="outlined"`, `Button component={Link}` back navigation, `Skeleton variant="text"` loader |
+| CollectionAccordion | `src/components/all/CollectionAccordion.tsx` | One collapsible `Accordion` per collection on `/all`: header shows name + bookmark count + edit/delete (non-toggling), lazy-loads bookmarks on first expand, caches across collapse/re-expand, refetches on `refreshKey`/`bookmarkSort` change while loaded. | MUI `Accordion`/`AccordionSummary`/`AccordionDetails`, `stopPropagation` header actions, `BookmarkList showCollectionChip={false}`, `Skeleton` rounded, empty state with `BookmarkAddIcon`, `useAccessToken` + `useError` |
+| AllPage | `src/pages/AllPage.tsx` | `/all` page: collections as accordions with nested bookmarks, collection + bookmark sort selects, New Collection / New Bookmark buttons, all four dialogs, `refreshKey` coordination after every mutation. | `maxWidth: 560, mx: 'auto'`, `Typography h4`, two `FormControl`/`Select` sorts, `FolderOpenIcon` empty state, `CollectionAccordion` list, dialog state via separate booleans |
 
 ## Pattern Library
 
@@ -307,7 +309,7 @@ Last updated: 2026-08-11
 ### BookmarkCard (Phase 3.2)
 
 File: `frontend/src/components/bookmarks/BookmarkCard.tsx`
-Last updated: 2026-08-11
+Last updated: 2026-08-13
 
 | Property | Pattern |
 |----------|---------|
@@ -317,7 +319,7 @@ Last updated: 2026-08-11
 | Favicon fallback | `LanguageIcon fontSize={24} color="text.secondary"` when favicon is null |
 | Title | `Typography variant="subtitle1"` with ellipsis overflow `whiteSpace: 'nowrap'` |
 | URL | `Typography variant="body2" color="text.secondary" fontFamily: 'var(--font-mono)'` truncated to 50 chars |
-| Collection chip | `Chip size="small"` shown only when `collection` is set |
+| Collection chip | `Chip size="small"` shown only when `collection` is set AND `showCollectionChip` (default `true`) |
 | Edit action | `IconButton size="small"` + `EditIcon fontSize="small"` `aria-label="Edit bookmark"` |
 | Delete action | `IconButton size="small"` + `DeleteIcon fontSize="small" color="error"` `aria-label="Delete bookmark"` |
 | Action click | `e.stopPropagation()` to prevent card click |
@@ -362,12 +364,12 @@ Last updated: 2026-08-11
 ### BookmarkList (Phase 3.2)
 
 File: `frontend/src/components/bookmarks/BookmarkList.tsx`
-Last updated: 2026-08-11
+Last updated: 2026-08-13
 
 | Property | Pattern |
 |----------|---------|
 | Container | MUI `Box` flex column with `gap: 1.5` |
-| Items | Maps `bookmarks` array to `BookmarkCard` with edit/delete/click callbacks |
+| Items | Maps `bookmarks` array to `BookmarkCard` with edit/delete/click callbacks; forwards `showCollectionChip` (default `true`) |
 
 ---
 
@@ -410,3 +412,52 @@ Last updated: 2026-08-11
 | 404 state | "Bookmark not found" with explanation |
 | Loading state | `Skeleton variant="text"` inside `Card variant="outlined"` — 5 lines |
 | Auth | Page wrapped in `<AuthGuard>` |
+---
+
+### CollectionAccordion (Phase 4)
+
+File: `frontend/src/components/all/CollectionAccordion.tsx`
+Last updated: 2026-08-13
+
+| Property | Pattern |
+|----------|---------|
+| Container | MUI `Accordion` (controlled `expanded` + `onChange`) |
+| Header | `AccordionSummary expandIcon={<ExpandMoreIcon />}` with name (`variant="subtitle1"`), count (`variant="body2" color="text.secondary"`, `${_count?.bookmarks ?? 0} bookmarks`), edit/delete `IconButton size="small"` |
+| Header actions | `e.stopPropagation()` in the `IconButton` onClick — clicking them must NOT toggle the panel |
+| Edit icon | `IconButton size="small"` + `EditIcon fontSize="small"`, `aria-label="Edit collection"` |
+| Delete icon | `IconButton size="small"` + `DeleteIcon fontSize="small" color="error"`, `aria-label="Delete collection"` |
+| Lazy load | `bookmarks` starts `null`; first expand triggers `fetchCollectionBookmarks(token, collection.id, bookmarkSort)` |
+| Cache | `hasLoadedRef` — collapsing and re-expanding does NOT refetch |
+| Refetch | Only when already loaded AND `refreshKey` or `bookmarkSort` changed (value-compared via refs, not object identity) |
+| Loading | 3× `Skeleton variant="rounded" height={72}` in flex column `gap: 1.5` (`--radius-md`) |
+| Empty | Centered `BookmarkAddIcon` at 64px + "No bookmarks in this collection yet" + "Add bookmark" CTA |
+| List | `BookmarkList showCollectionChip={false}` — chip is redundant inside its own group |
+| Error surface | `useError().showError()` — accordion stays open and keeps previous bookmarks/empty state |
+
+**Pattern notes:**
+MUI `Accordion` + `stopPropagation` header actions is the canonical collapsible-group pattern. Lazy-load nested data on first expand and cache it; refetch nested data only while it is already loaded, driven by a parent-bumped `refreshKey` and sort params. Compare sort/refresh changes by value (string key + number in refs), never by object identity. The parent owns `refreshKey` and bumps it after every mutation.
+
+---
+
+### AllPage (Phase 4)
+
+File: `frontend/src/pages/AllPage.tsx`
+Last updated: 2026-08-13
+
+| Property | Pattern |
+|----------|---------|
+| Page width | `maxWidth: 560, mx: 'auto'` (matches CollectionsPage) |
+| Page title | `Typography variant="h4" component="h1"` "All" with `mb: 3` |
+| Controls row | Two `Button variant="contained"` with `AddIcon` ("New Collection", "New Bookmark") + two `FormControl size="small"` `Select` sorts ("Collections sort", "Bookmarks sort", each Newest/Oldest/A–Z/Z–A) |
+| Body | Vertical stack of `CollectionAccordion` (`Box` flex column `gap: 1.5`) |
+| Loading | 3× `Skeleton variant="rounded" height={72}` in flex column `gap: 1.5` |
+| Empty | Centered `FolderOpenIcon fontSize={64}` + "No collections yet" + "Create your first collection" CTA |
+| Sort | Two separate `SortOption` states + `sortOptionToParams` helpers (`createdAt`/`name` for collections, `createdAt`/`title` for bookmarks) |
+| Refresh coordination | Single `refreshKey: number` state, `bumpRefreshKey()` after every successful mutation (create/edit/delete, collections + bookmarks); passed to each accordion |
+| Bookmark click | `useNavigate()` → `/bookmarks/:id` |
+| Dialogs | Reused `CollectionDialog` / `BookmarkDialog` / delete dialogs with separate boolean + selected-item state, matching `CollectionsPage` |
+| Error surface | `useError().showError()` on fetch/mutation failures |
+| Auth | Wrapped in `<AuthGuard>` in `router.tsx` |
+
+**Pattern notes:**
+This is the grouped/list-page pattern that composes `CollectionAccordion`. After any mutation the page refetches `fetchCollections` (to update `_count` and the list) AND bumps `refreshKey` so every already-loaded accordion refetches its bookmarks — without a full teardown. Bookmark create/edit/delete dialogs are owned here and wired through the accordion via callbacks. No search and no uncategorized section on `/all` (both out of scope).
